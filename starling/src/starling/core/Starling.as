@@ -20,6 +20,7 @@ package starling.core
     import flash.errors.IllegalOperationError;
     import flash.events.ErrorEvent;
     import flash.events.Event;
+    import flash.events.IEventDispatcher;
     import flash.events.KeyboardEvent;
     import flash.events.MouseEvent;
     import flash.events.TouchEvent;
@@ -206,6 +207,7 @@ package starling.core
         private var _juggler:Juggler;
         private var _painter:Painter;
         private var _touchProcessor:TouchProcessor;
+        private var _touchSource:IEventDispatcher;
         private var _antiAliasing:int;
         private var _frameTimestamp:Number;
         private var _frameID:uint;
@@ -1017,6 +1019,23 @@ package starling.core
             {
                 _touchProcessor.dispose();
                 _touchProcessor = value;
+            }
+        }
+
+        public function get touchSource():IEventDispatcher { return _touchSource || _nativeStage; }
+        public function set touchSource(value:IEventDispatcher):void
+        {
+            var prevSource:IEventDispatcher = this.touchSource;
+
+            if (value != prevSource)
+            {
+                for each (var touchEventType:String in touchEventTypes)
+                {
+                    prevSource.removeEventListener(touchEventType, onTouch, false);
+                    value.addEventListener(touchEventType, onTouch, false, 0, true);
+                }
+
+                _touchSource = value;
             }
         }
 
