@@ -159,6 +159,7 @@ package starling.display
         // helper objects
 
         private static var sAncestors:Vector.<DisplayObject> = new <DisplayObject>[];
+        private static var sCommonParentResults:Object = new Object();
         private static var sHelperPoint:Point = new Point();
         private static var sHelperPoint3D:Vector3D = new Vector3D();
         private static var sHelperPointAlt3D:Vector3D = new Vector3D();
@@ -246,8 +247,15 @@ package starling.display
             }
             
             // 1. find a common parent of this and the target space
-            
-            commonParent = findCommonParent(this, targetSpace);
+
+            findCommonParent(this, targetSpace, sCommonParentResults);
+            commonParent = sCommonParentResults.validParent;
+            if (!sCommonParentResults.commonParentFound)
+            {
+                // Target space was invalid, we fallback to the highest valid parent found as targetSpace
+                targetSpace = sCommonParentResults.validParent;
+            }
+            sCommonParentResults.validParent = null; // Clearing reference from the helper
             
             // 2. move up from this to common parent
             
@@ -269,6 +277,9 @@ package starling.display
             {
                 sHelperMatrix.concat(currentObject.transformationMatrix);
                 currentObject = currentObject._parent;
+
+                if (!currentObject)
+                    break;
             }
             
             // 4. now combine the two matrices
@@ -507,7 +518,14 @@ package starling.display
 
             // 1. find a common parent of this and the target space
 
-            commonParent = findCommonParent(this, targetSpace);
+            findCommonParent(this, targetSpace, sCommonParentResults);
+            commonParent = sCommonParentResults.validParent;
+            if (!sCommonParentResults.commonParentFound)
+            {
+                // Target space was invalid, we fallback to the highest valid parent found as targetSpace
+                targetSpace = sCommonParentResults.validParent;
+            }
+            sCommonParentResults.validParent = null; // Clearing reference from the helper
 
             // 2. move up from this to common parent
 
@@ -529,6 +547,9 @@ package starling.display
             {
                 sHelperMatrix3D.append(currentObject.transformationMatrix3D);
                 currentObject = currentObject._parent;
+
+                if (!currentObject)
+                    break;
             }
 
             // 4. now combine the two matrices
@@ -709,7 +730,8 @@ package starling.display
         }
 
         private static function findCommonParent(object1:DisplayObject,
-                                                 object2:DisplayObject):DisplayObject
+                                                 object2:DisplayObject,
+                                                 out:Object):void
         {
             var currentObject:DisplayObject = object1;
 
@@ -723,10 +745,13 @@ package starling.display
             while (currentObject && sAncestors.indexOf(currentObject) == -1)
                 currentObject = currentObject._parent;
 
-            sAncestors.length = 0;
+            if (currentObject)
+                out.validParent = currentObject;
+            else // Found no common parent, we pick the highest in the hierarchy
+                out.validParent = sAncestors.pop();
+            out.commonParentFound = currentObject != null;
 
-            if (currentObject) return currentObject;
-            else throw new ArgumentError("Object not connected to target");
+            sAncestors.length = 0;
         }
 
         // stage event handling
